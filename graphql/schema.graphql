@@ -14,12 +14,12 @@ type Post {
   count_likes: Int
   count_laugh: Int
   count_comment: Int
-  comment: [Comment!]!
+  comments: [Comment!]!
 }
 
 type Comment {
   _id: ID!
-  message: String!
+  message: String
   user: User!
   post_id: ID!
   reply_id: ID

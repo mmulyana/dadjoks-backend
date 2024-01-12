@@ -14,6 +14,9 @@ const resolvers = {
       }
       const posts = await Post.aggregate([
         {
+          $match: { user_id: user.user_id },
+        },
+        {
           $lookup: {
             from: 'users',
             localField: 'user_id',
@@ -23,6 +26,9 @@ const resolvers = {
         },
       ])
       const comments = await Comment.aggregate([
+        {
+          $match: { user_id: user.user_id },
+        },
         {
           $lookup: {
             from: 'users',
@@ -35,12 +41,11 @@ const resolvers = {
 
       return {
         ...user._doc,
-        _id: user._id?.toString(),
         comments: comments.map((comment) => ({
           ...comment,
-          _id: comment._id.toString(),
+          _id: comment._id?.toString(),
           user: {
-            _id: comment.user._id.toString(),
+            _id: comment.user._id?.toString(),
             ...comment.user,
           },
         })),
@@ -132,6 +137,45 @@ const resolvers = {
           username: post[0].author?.username || 'Unknown User',
           ...post[0].author,
         },
+      }
+    },
+    comments: async (__, { id }) => {
+      try {
+        const comments = await Comment.aggregate([
+          {
+            $match: {
+              post_id: new mongoose.Types.ObjectId(id),
+            },
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'user_id',
+              foreignField: 'user_id',
+              as: 'user',
+            },
+          },
+          {
+            $addFields: {
+              user: { $arrayElemAt: ['$user', 0] },
+            },
+          },
+        ])
+        const formattedComments = comments.map((comment) => ({
+          ...comment,
+          post_id: comment.post_id?.toString(),
+          reply_id: comment.reply_id?.toString(),
+          user: {
+            _id: comment.user?._id?.toString(),
+            username: comment.user?.username || 'Unknown User',
+            ...comment.user,
+          },
+        }))
+
+        return formattedComments
+      } catch (error) {
+        console.log(error)
+        throw notFoundError(error)
       }
     },
   },
@@ -334,10 +378,12 @@ const resolvers = {
   },
 
   Post: {
-    comment: async (post) => {
+    comments: async (post) => {
       const comments = await Comment.aggregate([
         {
-          $match: { post_id: new mongoose.Types.ObjectId(post._id) },
+          $match: {
+            post_id: new mongoose.Types.ObjectId(post._id),
+          },
         },
         {
           $lookup: {
@@ -353,15 +399,18 @@ const resolvers = {
           },
         },
       ])
-
-      return comments.map((comment) => ({
-        ...comment.toObject(),
-        _id: comment._id.toString(),
+      const formattedComments = comments.map((comment) => ({
+        ...comment,
+        post_id: comment.post_id?.toString(),
+        reply_id: comment.reply_id?.toString(),
         user: {
-          _id: comment.user._id.toString(),
-          ...comment.user.toObject(),
+          _id: comment.user?._id?.toString(),
+          username: comment.user?.username || 'Unknown User',
+          ...comment.user,
         },
       }))
+
+      return formattedComments
     },
   },
 }
