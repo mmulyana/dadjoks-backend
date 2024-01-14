@@ -64,45 +64,49 @@ const resolvers = {
       const POSTS_PER_PAGE = 10
       const skip = (page - 1) * POSTS_PER_PAGE
 
-      const posts = await Post.aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user_id',
-            foreignField: 'user_id',
-            as: 'author',
+      try {
+        const posts = await Post.aggregate([
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'user_id',
+              foreignField: 'user_id',
+              as: 'author',
+            },
           },
-        },
-        {
-          $unwind: {
-            path: '$author',
-            preserveNullAndEmptyArrays: true,
+          {
+            $unwind: {
+              path: '$author',
+              preserveNullAndEmptyArrays: true,
+            },
           },
-        },
-        {
-          $sort: { timestamp: -1 },
-        },
-        {
-          $skip: skip,
-        },
-        {
-          $limit: POSTS_PER_PAGE,
-        },
-      ])
+          {
+            $sort: { timestamp: -1 },
+          },
+          {
+            $skip: skip,
+          },
+          {
+            $limit: POSTS_PER_PAGE,
+          },
+        ])
 
-      if (!posts || posts.length === 0) {
-        return []
+        if (!posts && posts.length === 0) {
+          return []
+        }
+
+        return posts.map((post) => ({
+          ...post,
+          post_id: post._id?.toString(),
+          author: {
+            _id: post.author?._id?.toString(),
+            username: post.author?.username || 'Unknown User',
+            ...post.author,
+          },
+        }))
+      } catch (error) {
+        throw notFoundError(error)
       }
-
-      return posts.map((post) => ({
-        ...post,
-        post_id: post._id?.toString(),
-        author: {
-          _id: post.author?._id?.toString(),
-          username: post.author?.username || 'Unknown User',
-          ...post.author,
-        },
-      }))
     },
     // ✅
     post: async (__, { id }) => {
@@ -139,6 +143,7 @@ const resolvers = {
         },
       }
     },
+    // ✅
     comments: async (__, { id }) => {
       try {
         const comments = await Comment.aggregate([
@@ -208,6 +213,9 @@ const resolvers = {
       const newPost = new Post({
         content,
         user_id,
+        count_comment: 0,
+        count_laugh: 0,
+        count_likes: 0,
       })
 
       const createdPost = await newPost.save()
@@ -274,6 +282,7 @@ const resolvers = {
       await Post.findByIdAndDelete(id)
       return post
     },
+    // ✅
     createComment: async (
       __,
       { input: { post_id, message, reply_id, user_id } }
@@ -295,52 +304,71 @@ const resolvers = {
       })
 
       const createdComment = await newComment.save()
+
+      let oldCountComment =
+        typeof post.count_comment == 'undefined' ? 0 : post.count_comment
+      post.count_comment = oldCountComment + 1
+      await post.save()
+
       return {
         ...createdComment._doc,
         _id: createdComment._id.toString(),
       }
     },
+    // ✅
     updateComment: async (__, { input: { id, message, user_id } }) => {
       const user = await User.findOne({ user_id })
       if (!user) {
         throw unauthorizedError('Missing authentication')
       }
+      const comment = await Comment.findOne({
+        _id: id,
+        user_id: user.user_id,
+      })
+      if (!comment) {
+        throw notFoundError('comment is missing')
+      }
 
-      Comment.findByIdAndUpdate(
-        id,
-        {
-          message,
-        },
-        (err, data) => {
-          if (err) {
-            throw dbError('failed update comment')
-          } else {
-            return data
+      try {
+        const updatedComment = await Comment.findByIdAndUpdate(
+          id,
+          {
+            message,
+          },
+          {
+            new: true,
           }
+        )
+
+        return {
+          ...updatedComment._doc,
         }
-      )
+      } catch (error) {
+        throw dbError(error)
+      }
     },
+    // ✅
     deleteComment: async (__, { input: { id, post_id, user_id } }) => {
       const user = await User.findOne({ user_id })
       if (!user) {
         throw unauthorizedError('Missing authentication')
       }
 
-      const post = await Post.findById(post_id)
+      const post = await Post.findOne({ _id: post_id })
       if (!post) {
         throw notFoundError('post is missing')
       }
 
-      Comment.findByIdAndDelete(id, (err, data) => {
-        if (err) {
-          throw dbError('failed delete comment')
-        } else {
-          post.count_comment = post.count_comment - 1
-          post.save()
-          return data
-        }
-      })
+      const deletedComment = await Comment.findByIdAndDelete(id)
+      let oldCountComment = post.count_comment
+      post.count_comment = oldCountComment--
+      await post.save()
+
+      return {
+        ...deletedComment._doc,
+      }
     },
+    // ✅
     likesPost: async (__, { input: { post_id, user_id } }) => {
       const user = await User.findOne({ user_id })
       if (!user) {
@@ -350,14 +378,12 @@ const resolvers = {
       const post = await Post.findById(post_id)
       post.count_likes = post.count_likes + 1
 
-      post.save((err, data) => {
-        if (err) {
-          throw dbError('failed likes post')
-        } else {
-          return data
-        }
-      })
+      const newPost = await post.save()
+      return {
+        ...newPost._doc,
+      }
     },
+    // ✅
     laughPost: async (__, { input: { post_id, user_id } }) => {
       const user = await User.findOne({ user_id })
       if (!user) {
@@ -367,16 +393,13 @@ const resolvers = {
       const post = await Post.findById(post_id)
       post.count_laugh = post.count_laugh + 1
 
-      post.save((err, data) => {
-        if (err) {
-          throw dbError('failed laugh post')
-        } else {
-          return data
-        }
-      })
+      const newPost = await post.save()
+      return {
+        ...newPost._doc,
+      }
     },
   },
-
+  // ✅
   Post: {
     comments: async (post) => {
       const comments = await Comment.aggregate([
@@ -397,6 +420,9 @@ const resolvers = {
           $addFields: {
             user: { $arrayElemAt: ['$user', 0] },
           },
+        },
+        {
+          $sort: { timestamp: -1 },
         },
       ])
       const formattedComments = comments.map((comment) => ({
