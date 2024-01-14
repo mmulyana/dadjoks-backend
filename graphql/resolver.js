@@ -1,188 +1,29 @@
-const { GraphQLError } = require('graphql')
 const User = require('../model/user.js')
 const Comment = require('../model/comment.js')
 const Post = require('../model/post.js')
 const mongoose = require('mongoose')
+const { getUser } = require('../services/user.js')
+const { getAllPosts, getPost } = require('../services/post.js')
+const {
+  notFoundError,
+  dbError,
+  unauthorizedError,
+} = require('../utils/error.js')
+const { getAllCommentsByPostId } = require('../services/comment.js')
 
 const resolvers = {
   Query: {
-    // ✅
     user: async (__, { username }) => {
       const user = await User.findOne({ username })
       if (!user) {
         throw notFoundError('user not found')
       }
-      const posts = await Post.aggregate([
-        {
-          $match: { user_id: user.user_id },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user_id',
-            foreignField: 'user_id',
-            as: 'user',
-          },
-        },
-      ])
-      const comments = await Comment.aggregate([
-        {
-          $match: { user_id: user.user_id },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user_id',
-            foreignField: 'user_id',
-            as: 'user',
-          },
-        },
-      ])
-
-      return {
-        ...user._doc,
-        comments: comments.map((comment) => ({
-          ...comment,
-          _id: comment._id?.toString(),
-          user: {
-            _id: comment.user._id?.toString(),
-            ...comment.user,
-          },
-        })),
-        posts: posts.map((post) => ({
-          ...post,
-          _id: post._id?.toString(),
-          author: {
-            _id: post.user._id?.toString(),
-            ...post.user,
-          },
-        })),
-      }
+      const userData = getUser(user)
+      return userData
     },
-    // ✅
-    posts: async (__, { page = 1 }) => {
-      const POSTS_PER_PAGE = 10
-      const skip = (page - 1) * POSTS_PER_PAGE
-
-      try {
-        const posts = await Post.aggregate([
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'user_id',
-              foreignField: 'user_id',
-              as: 'author',
-            },
-          },
-          {
-            $unwind: {
-              path: '$author',
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $sort: { timestamp: -1 },
-          },
-          {
-            $skip: skip,
-          },
-          {
-            $limit: POSTS_PER_PAGE,
-          },
-        ])
-
-        if (!posts && posts.length === 0) {
-          return []
-        }
-
-        return posts.map((post) => ({
-          ...post,
-          post_id: post._id?.toString(),
-          author: {
-            _id: post.author?._id?.toString(),
-            username: post.author?.username || 'Unknown User',
-            ...post.author,
-          },
-        }))
-      } catch (error) {
-        throw notFoundError(error)
-      }
-    },
-    // ✅
-    post: async (__, { id }) => {
-      const post = await Post.aggregate([
-        {
-          $match: { _id: new mongoose.Types.ObjectId(id) },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user_id',
-            foreignField: 'user_id',
-            as: 'author',
-          },
-        },
-        {
-          $addFields: {
-            author: { $arrayElemAt: ['$author', 0] },
-          },
-        },
-      ])
-
-      if (!post || post.length === 0) {
-        throw notFoundError('post is not found')
-      }
-
-      return {
-        post_id: post[0]._id?.toString(),
-        ...post[0],
-        author: {
-          _id: post[0].author?._id?.toString(),
-          username: post[0].author?.username || 'Unknown User',
-          ...post[0].author,
-        },
-      }
-    },
-    // ✅
-    comments: async (__, { id }) => {
-      try {
-        const comments = await Comment.aggregate([
-          {
-            $match: {
-              post_id: new mongoose.Types.ObjectId(id),
-            },
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'user_id',
-              foreignField: 'user_id',
-              as: 'user',
-            },
-          },
-          {
-            $addFields: {
-              user: { $arrayElemAt: ['$user', 0] },
-            },
-          },
-        ])
-        const formattedComments = comments.map((comment) => ({
-          ...comment,
-          post_id: comment.post_id?.toString(),
-          reply_id: comment.reply_id?.toString(),
-          user: {
-            _id: comment.user?._id?.toString(),
-            username: comment.user?.username || 'Unknown User',
-            ...comment.user,
-          },
-        }))
-
-        return formattedComments
-      } catch (error) {
-        console.log(error)
-        throw notFoundError(error)
-      }
-    },
+    posts: async (__, { page = 1 }) => getAllPosts(page),
+    post: async (__, { id }) => getPost(id),
+    comments: async (__, { id }) => getAllCommentsByPostId(id),
   },
 
   Mutation: {
@@ -439,22 +280,6 @@ const resolvers = {
       return formattedComments
     },
   },
-}
-
-function notFoundError(message) {
-  return new GraphQLError(message, {
-    extensions: { code: 'NOT_FOUND' },
-  })
-}
-
-function dbError(message) {
-  return new GraphQLError(message)
-}
-
-function unauthorizedError(message) {
-  return new GraphQLError(message, {
-    extensions: { code: 'UNAUTHORIZED' },
-  })
 }
 
 module.exports = { resolvers }
