@@ -1,5 +1,7 @@
 const Comment = require('../model/comment')
 const Post = require('../model/post')
+const User = require('../model/user.js')
+const { unauthorizedError } = require('../utils/error.js')
 
 async function getUser(user) {
   const posts = await Post.aggregate([
@@ -50,4 +52,32 @@ async function getUser(user) {
   }
 }
 
-module.exports = { getUser }
+async function createUser({ username, image_url, role, user_id }) {
+  try {
+    const newUser = new User({
+      username,
+      image_url,
+      role,
+      user_id,
+    })
+
+    const createdUser = await newUser.save()
+    return {
+      ...createdUser._doc,
+      comments: [],
+      posts: [],
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+async function findUser(user_id) {
+  const user = await User.findOne({ user_id })
+  if (!user) {
+    throw unauthorizedError('Missing authentication')
+  }
+  return user
+}
+
+module.exports = { getUser, createUser, findUser }

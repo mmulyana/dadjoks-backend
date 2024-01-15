@@ -87,4 +87,95 @@ async function getPost(id) {
   }
 }
 
-module.exports = { getAllPosts, getPost }
+async function createPost({ content, user_id, user }) {
+  const newPost = new Post({
+    content,
+    user_id,
+    count_comment: 0,
+    count_laugh: 0,
+    count_likes: 0,
+  })
+  console.log(user)
+  const createdPost = await newPost.save()
+  return {
+    ...createdPost._doc,
+    post_id: createdPost._id.toString(),
+    author: {
+      ...user._doc,
+    },
+  }
+}
+
+async function findPostByUser({ post_id, user }) {
+  const post = await Post.findOne({
+    _id: post_id,
+    user_id: user.user_id,
+  })
+  if (!post) {
+    throw notFoundError('Missing post')
+  }
+
+  return post
+}
+
+async function updatePost({ post_id, content, user }) {
+  try {
+    const updatedPost = await Post.findByIdAndUpdate(
+      post_id,
+      { content: content },
+      { new: true }
+    )
+
+    if (!updatedPost) {
+      throw notFoundError('Failed to update post')
+    }
+
+    return {
+      ...updatedPost._doc,
+      post_id: updatedPost._id.toString(),
+      author: {
+        ...user._doc,
+      },
+    }
+  } catch (err) {
+    throw dbError('Failed to update post')
+  }
+}
+
+async function deletePost(id) {
+  const deletedPost = await Post.findByIdAndDelete(id)
+  return {
+    ...deletedPost._doc,
+  }
+}
+
+async function likePost({ post_id }) {
+  const post = await Post.findById(post_id)
+  post.count_likes = post.count_likes + 1
+
+  const newPost = await post.save()
+  return {
+    ...newPost._doc,
+  }
+}
+
+async function laughPost({ post_id }) {
+  const post = await Post.findById(post_id)
+  post.count_laugh = post.count_laugh + 1
+
+  const newPost = await post.save()
+  return {
+    ...newPost._doc,
+  }
+}
+
+module.exports = {
+  getAllPosts,
+  getPost,
+  createPost,
+  updatePost,
+  findPostByUser,
+  deletePost,
+  likePost,
+  laughPost,
+}
