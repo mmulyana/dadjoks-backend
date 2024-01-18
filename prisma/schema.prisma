@@ -14,11 +14,24 @@ datasource db {
 }
 
 model User {
-  email        String @id @unique @db.VarChar(100)
+  id           Int    @id
+  email        String @unique @db.VarChar(100)
   username     String @db.VarChar(20)
   password     String
   image        Int    @default(1)
   refreshToken String
+  jokes        Joke[]
 
   @@map("users")
+}
+
+model Joke {
+  id        Int      @id @default(autoincrement())
+  text      String
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@map("jokes")
 }
