@@ -63,9 +63,11 @@ async function findJokesByAuthor({ authorId }) {
 
 async function updateJoke({ text, authorId }) {
   try {
+    const updatedAt = new Date()
     const joke = await db.joke.update({
       data: {
         text,
+        updatedAt,
       },
       where: {
         authorId,
@@ -88,6 +90,17 @@ async function deleteJoke(id) {
   return joke
 }
 
+async function createReplyJoke(jokeId, typeReply) {
+  const reply = await db.replies.create({
+    data: {
+      jokeId,
+      typeReply,
+    },
+  })
+
+  return reply
+}
+
 module.exports = {
   getAllJokes,
   getJoke,
@@ -95,4 +108,5 @@ module.exports = {
   findJokesByAuthor,
   updateJoke,
   deleteJoke,
+  createReplyJoke,
 }
