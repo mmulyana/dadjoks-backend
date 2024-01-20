@@ -51,8 +51,48 @@ async function createJoke({ text, authorId }) {
   return joke
 }
 
+async function findJokesByAuthor({ authorId }) {
+  const jokes = await db.joke.findMany({
+    where: {
+      authorId,
+    },
+  })
+
+  return jokes
+}
+
+async function updateJoke({ text, authorId }) {
+  try {
+    const joke = await db.joke.update({
+      data: {
+        text,
+      },
+      where: {
+        authorId,
+      },
+    })
+
+    return joke
+  } catch (err) {
+    throw dbError('Failed to update post')
+  }
+}
+
+async function deleteJoke(id) {
+  const joke = await db.joke.delete({
+    where: {
+      id,
+    },
+  })
+
+  return joke
+}
+
 module.exports = {
   getAllJokes,
   getJoke,
   createJoke,
+  findJokesByAuthor,
+  updateJoke,
+  deleteJoke,
 }
