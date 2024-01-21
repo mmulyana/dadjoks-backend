@@ -101,6 +101,16 @@ async function createReplyJoke(jokeId, typeReply) {
   return reply
 }
 
+async function deleteReplyJoke(id) {
+  const reply = await db.replies.delete({
+    where: {
+      id,
+    },
+  })
+
+  return reply
+}
+
 module.exports = {
   getAllJokes,
   getJoke,
@@ -109,4 +119,5 @@ module.exports = {
   updateJoke,
   deleteJoke,
   createReplyJoke,
+  deleteReplyJoke,
 }

@@ -60,4 +60,6 @@ model Comment {
   author     User     @relation(fields: [authorId], references: [id])
   createdAt  DateTime @default(now()) @db.Date
   updateddAt DateTime @default(now()) @db.Date
+
+  @@map("comments")
 }
