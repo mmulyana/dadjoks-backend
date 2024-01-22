@@ -1,8 +1,5 @@
-const Comment = require('../model/comment')
-const Post = require('../model/post')
 const db = require('../utils/db')
 const { notFoundError } = require('../utils/error')
-const mongoose = require('mongoose')
 
 async function getAllJokes(page) {
   try {
