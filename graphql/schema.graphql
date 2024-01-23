@@ -1,97 +1,41 @@
 type User {
-  user_id: ID
+  id: ID
   username: String!
-  image_url: String
-  role: Role!
-  posts: [Post!]!
+  password: String!
+  image: String
+  jokes: [Joke!]!
   comments: [Comment!]!
 }
 
-type Post {
-  post_id: ID!
-  content: String!
+type Joke {
+  id: ID!
+  text: String!
   author: User!
-  count_likes: Int
-  count_laugh: Int
-  count_comment: Int
   comments: [Comment!]!
+  createdAt: String
+  upadtedAt: String
 }
 
 type Comment {
-  _id: ID!
-  message: String
-  user: User!
-  post_id: ID!
-  reply_id: ID
-}
-
-enum Role {
-  USER
-  ADMIN
+  id: ID!
+  text: String!
+  author: User!
+  createdAt: String
+  updatedAt: String
 }
 
 type Query {
-  user(username: String!): User
-  posts(page: Int!): [Post!]
-  post(id: ID!): Post
+  user(email: String!): User
+  jokes(): [Post!]
+  joke(id: ID!): Post
   comments(id: ID!): [Comment!]
 }
 
-input CreateUserInput {
-  user_id: ID!
-  username: String!
-  image_url: String
-  role: Role
-}
-
-input createPostInput {
-  content: String!
-  user_id: String!
-}
-
-input updatePostInput {
-  post_id: ID!
-  content: String!
-  user_id: ID!
-}
-
-input createCommentInput {
-  post_id: ID!
-  message: String
-  reply_id: ID
-  user_id: String!
-}
-
-input updateCommentInput {
-  id: ID!
-  message: String
-  user_id: ID!
-}
-
-input deletePostInput {
-  id: ID!
-  user_id: ID!
-}
-
-input deleteCommentInput {
-  id: ID!
-  post_id: ID!
-  user_id: ID!
-}
-
-input countInput {
-  post_id: ID!
-  user_id: ID!
+input createJokeInput {
+  text: String!
+  authorId: ID!
 }
 
 type Mutation {
-  createUser(input: CreateUserInput!): User
-  createPost(input: createPostInput!): Post
-  updatePost(input: updatePostInput!): Post
-  deletePost(input: deletePostInput!): Post
-  createComment(input: createCommentInput!): Comment
-  updateComment(input: updateCommentInput!): Comment
-  deleteComment(input: deleteCommentInput!): Comment
-  likesPost(input: countInput): Post
-  laughPost(input: countInput): Post
+  createJoke(input: createJokeInput!): Joke
 }
