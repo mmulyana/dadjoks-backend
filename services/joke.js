@@ -58,7 +58,7 @@ async function findJokesByAuthor({ authorId }) {
   return jokes
 }
 
-async function updateJoke({ text, authorId }) {
+async function updateJoke({ text, id }) {
   try {
     const updatedAt = new Date()
     const joke = await db.joke.update({
@@ -67,7 +67,7 @@ async function updateJoke({ text, authorId }) {
         updatedAt,
       },
       where: {
-        authorId,
+        id,
       },
     })
 

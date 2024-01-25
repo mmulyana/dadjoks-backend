@@ -36,6 +36,12 @@ input createJokeInput {
   authorId: ID!
 }
 
+input updateJokeInput {
+  text: String!
+  id: ID!
+}
+
+
 type Mutation {
   createJoke(input: createJokeInput!): Joke
 }

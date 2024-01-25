@@ -1,4 +1,9 @@
-const { getAllJokes, getJoke, createJoke } = require('../services/joke.js')
+const {
+  getAllJokes,
+  getJoke,
+  createJoke,
+  updateJoke,
+} = require('../services/joke.js')
 const {
   notFoundError,
   dbError,
@@ -17,9 +22,9 @@ const resolvers = {
 
   Mutation: {
     createJoke: async (__, { input }) => createJoke({ ...input }),
+    updateJoke: async (__, { input }) => updateJoke({ ...input }),
   },
-  Post: {
-  },
+  Post: {},
 }
 
 module.exports = { resolvers }
