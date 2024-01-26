@@ -1,5 +1,5 @@
 const db = require('../utils/db')
-const { notFoundError } = require('../utils/error')
+const { notFoundError, dbError } = require('../utils/error')
 
 async function getAllJokes(page) {
   try {
@@ -58,7 +58,7 @@ async function findJokesByAuthor({ authorId }) {
   return jokes
 }
 
-async function updateJoke({ text, id }) {
+async function updateJoke({ text, id, authorId }) {
   try {
     const updatedAt = new Date()
     const joke = await db.joke.update({
@@ -67,22 +67,34 @@ async function updateJoke({ text, id }) {
         updatedAt,
       },
       where: {
-        id,
+        AND: [
+          {
+            id,
+          },
+          {
+            authorId,
+          },
+        ],
       },
     })
 
     return joke
   } catch (err) {
-    throw dbError('Failed to update post')
+    throw dbError(err.message)
   }
 }
 
-async function deleteJoke(id) {
-  const joke = await db.joke.delete({
-    where: {
-      id,
-    },
-  })
+async function deleteJoke(id, authorId) {
+  try {
+    const joke = await db.joke.delete({
+      where: {
+        AND: [{ id }, { authorId }],
+      },
+    })
+    return joke
+  } catch (error) {
+    throw dbError(error.message)
+  }
 
   return joke
 }

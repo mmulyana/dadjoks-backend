@@ -41,7 +41,13 @@ input updateJokeInput {
   id: ID!
 }
 
+input deleteJokeInput {
+  id: ID!
+  authorId: ID!
+}
 
 type Mutation {
   createJoke(input: createJokeInput!): Joke
+  updateJoke(input: updateJokeInput!): Joke
+  deleteJoke(input: deleteJokeInput!): Joke
 }

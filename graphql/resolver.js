@@ -3,6 +3,7 @@ const {
   getJoke,
   createJoke,
   updateJoke,
+  deleteJoke,
 } = require('../services/joke.js')
 const {
   notFoundError,
@@ -23,6 +24,7 @@ const resolvers = {
   Mutation: {
     createJoke: async (__, { input }) => createJoke({ ...input }),
     updateJoke: async (__, { input }) => updateJoke({ ...input }),
+    deleteJoke: async (__, { input }) => deleteJoke({ ...input }),
   },
   Post: {},
 }
