@@ -46,8 +46,16 @@ input deleteJokeInput {
   authorId: ID!
 }
 
+input registerInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
 type Mutation {
   createJoke(input: createJokeInput!): Joke
   updateJoke(input: updateJokeInput!): Joke
   deleteJoke(input: deleteJokeInput!): Joke
+  register(input: registerInput!): User
+  login(input: loginInput!): User
 }
